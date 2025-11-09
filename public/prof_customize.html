@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conductor • Customize Course</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--shadow:0 6px 24px rgba(0,0,0,.35)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:900px;margin:0 auto;padding:20px}
+    .nav a{color:var(--primary);text-decoration:none;font-weight:700;margin-right:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .title{margin:0 0 10px;font-weight:900}
+    .muted{color:var(--muted)}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    td,th{padding:8px 10px;vertical-align:middle}
+    input[type=number]{width:100px;border:1px solid var(--border);border-radius:8px;padding:8px;background:transparent;color:var(--text)}
+    input[type=checkbox]{transform:scale(1.2)}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav" style="margin-bottom:14px;">
+      <a href="/professor.html">← Back to Professor</a>
+      <a href="/prof_course_desc.html">Course Description</a>
+      <a href="/logout">Logout</a>
+    </nav>
+
+    <section class="card">
+      <h1 class="title">Customize Course Rubric</h1>
+      <p class="muted">Toggle rubric items and set their weights (0–100). Current demo supports “Attendance”; weight contributes proportionally to a 10-point score shown on your roster.</p>
+      <div id="err" class="muted" role="alert" aria-live="polite"></div>
+      <table>
+        <thead><tr><th style="text-align:left">Item</th><th>Enabled</th><th>Weight (%)</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div style="margin-top:12px;">
+        <button id="save" class="btn">Save</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    async function fetchJSON(url,opts){
+      const init=opts||{};init.headers=Object.assign({'Accept':'application/json','Content-Type':'application/json'},init.headers||{});
+      const r=await fetch(url,init);let b={};try{b=await r.json();}catch{}
+      if(!r.ok) throw new Error(b.error || (r.status+' '+r.statusText)); return b;
+    }
+    async function ensureProfessor(){
+      const me=await fetchJSON('/api/session/me'); if(!me.is_professor) location.href='/login.html';
+      return me;
+    }
+
+    let items = []; // {item_key,label,enabled,weight}
+    function upsertAttendanceIfMissing(){
+      if(!items.some(i=>i.item_key==='attendance')){
+        items.push({item_key:'attendance',label:'Attendance',enabled:true,weight:100});
+      }
+    }
+    function render(){
+      const tb=document.getElementById('tbody');
+      if(!items.length){ tb.innerHTML = '<tr><td colspan="3" class="muted">No items.</td></tr>'; return; }
+      tb.innerHTML = items.map((it,idx)=>`
+        <tr>
+          <td>${it.label || it.item_key}</td>
+          <td style="text-align:center"><input type="checkbox" data-i="${idx}" ${it.enabled ? 'checked':''}></td>
+          <td style="text-align:center"><input type="number" min="0" max="100" step="1" data-w="${idx}" value="${Number(it.weight||0)}"></td>
+        </tr>
+      `).join('');
+      tb.querySelectorAll('input[type=checkbox]').forEach(ch=>{
+        ch.addEventListener('change',()=>{ items[+ch.dataset.i].enabled = ch.checked; });
+      });
+      tb.querySelectorAll('input[type=number]').forEach(n=>{
+        n.addEventListener('input',()=>{ items[+n.dataset.w].weight = Math.max(0, Math.min(100, Number(n.value||0))); });
+      });
+    }
+
+    document.getElementById('save').addEventListener('click', async ()=>{
+      try{
+        const payload = items.map(i=>({ item_key:i.item_key, label:i.label, enabled:!!i.enabled, weight:Number(i.weight||0) }));
+        await fetchJSON('/api/professor/rubric',{method:'PUT',body:JSON.stringify(payload)});
+        alert('Saved.');
+      }catch(e){ document.getElementById('err').textContent = e.message || 'Failed to save.'; }
+    });
+
+    (async ()=>{
+      try{
+        await ensureProfessor();
+        items = await fetchJSON('/api/professor/rubric');
+        // ensure we always have attendance row visible in UI
+        upsertAttendanceIfMissing();
+        render();
+      }catch(e){
+        document.getElementById('err').textContent = e.message || 'Failed to load.';
+      }
+    })();
+  </script>
+</body>
+</html>

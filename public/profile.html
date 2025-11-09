@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conductor • Profile</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--badge:#eef;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--badge:#1e2a44;--shadow:0 6px 24px rgba(0,0,0,.35)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4}
+    .wrap{max-width:900px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .brand{font-weight:900}
+    .nav a{color:var(--primary);text-decoration:none;font-weight:700;margin-right:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .row{display:grid;grid-template-columns:130px 1fr;gap:6px 12px}
+    @media (max-width:560px){.row{grid-template-columns:1fr}}
+    .label{color:var(--muted)}
+    .value{font-weight:700}
+    .avatar{width:100px;height:100px;border-radius:50%;object-fit:cover;border:1px solid var(--border);background:#ddd}
+    .grid{display:grid;gap:12px}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+    input[type=text],textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;background:transparent;color:var(--text)}
+    textarea{min-height:90px}
+    ul.list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+    .item{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:12px}
+    .title{font-weight:800}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Conductor • Profile</div>
+      <nav class="nav">
+        <a href="/student.html">My Dashboard</a>
+        <a href="/professor">Professor</a>
+        <a href="/ta">TA</a>
+        <a href="/team-leader">Team Leader</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <!-- Profile header -->
+    <section class="card" id="pCard" aria-busy="true">
+      <div style="display:flex;gap:16px;align-items:center;">
+        <img id="pPhoto" class="avatar" src="https://via.placeholder.com/100?text=U" alt="">
+        <div>
+          <div id="pName" class="title" style="font-size:1.25rem">…</div>
+          <div id="pPronouns" class="muted"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="label">Email</div><div id="pEmail" class="value">—</div>
+        <div class="label">Phone</div><div id="pPhone" class="value">—</div>
+        <div class="label">Social</div><div id="pSocial" class="value">—</div>
+        <div class="label">Course</div><div id="pCourse" class="value">—</div>
+        <div class="label">Term</div><div id="pTerm" class="value">—</div>
+      </div>
+    </section>
+
+    <!-- Start a message -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="title" style="margin:0 0 8px;">Reach out to this person</h2>
+      <p class="muted" style="margin:0 0 8px;">Starts a private thread tied to the shared course. Replies show below.</p>
+      <div id="mErr" class="muted" role="alert" aria-live="polite"></div>
+      <div>
+        <textarea id="mBody" placeholder="Write your message…"></textarea>
+        <div style="margin-top:8px;">
+          <button id="mSend" class="btn">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Threads -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="title" style="margin:0 0 8px;">Threads with this person</h2>
+      <ul id="threads" class="list" aria-busy="true">
+        <li class="item"><div class="muted">Loading…</div></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ---- helpers ----
+    const qs = (s, r=document)=> r.querySelector(s);
+    async function fetchJSON(url, opts){
+      const init = opts || {};
+      init.headers = Object.assign({'Accept':'application/json','Content-Type':'application/json'}, init.headers||{});
+      const r = await fetch(url, init);
+      let b={}; try{ b = await r.json(); }catch{}
+      if(!r.ok) throw new Error(b.error || (r.status+' '+r.statusText));
+      return b;
+    }
+    function fmtDT(x){ return new Date(x).toLocaleString(); }
+
+    function getIdFromPath(){
+      const m = location.pathname.match(/\/profile\/([^/]+)/);
+      return m ? m[1] : '';
+    }
+
+    // ---- load profile ----
+    async function loadProfile(){
+      const id = getIdFromPath();
+      const p = await fetchJSON(`/api/profile/${id}`);
+      qs('#pCard').setAttribute('aria-busy','false');
+      qs('#pPhoto').src = p.photo_url || 'https://via.placeholder.com/100?text=U';
+      qs('#pPhoto').alt = p.display_name || 'Profile photo';
+      qs('#pName').textContent = p.display_name || '';
+      qs('#pPronouns').textContent = p.pronouns || '';
+      qs('#pEmail').textContent = p.email || '—';
+      qs('#pPhone').textContent = p.phone || '—';
+      try{
+        const socials = JSON.parse(p.socials || '{}');
+        const s = Object.entries(socials).map(([k,v]) => `<a target="_blank" rel="noopener" href="${v}">${k}</a>`).join(' · ');
+        qs('#pSocial').innerHTML = s || '—';
+      }catch{ qs('#pSocial').textContent = '—'; }
+      if(p.course){
+        qs('#pCourse').textContent = `${p.course.course_code} — ${p.course.course_title}`;
+        qs('#pTerm').textContent = `${p.course.term_code} · ${p.course.term_name}`;
+      }else{
+        qs('#pCourse').textContent = '—';
+        qs('#pTerm').textContent = '—';
+      }
+    }
+
+    // ---- load threads (journal entries for this user) ----
+    async function loadThreads(){
+      const id = getIdFromPath();
+      const ul = qs('#threads');
+      ul.setAttribute('aria-busy','true');
+      try{
+        const list = await fetchJSON(`/api/profile/${id}/journal`);
+        ul.setAttribute('aria-busy','false');
+        if(!list.length){ ul.innerHTML = '<li class="item"><div class="muted">No messages yet.</div></li>'; return; }
+        ul.innerHTML = list.map(x=>`
+          <li class="item thread" data-id="${x.id}">
+            <div class="title">${fmtDT(x.created_at)}</div>
+            <div class="muted" style="font-size:.92rem;margin:4px 0;">Reach-out: ${x.reach_out_to}</div>
+            <div style="white-space:pre-wrap;">${x.content}</div>
+            <div class="replies" style="margin-top:10px;"></div>
+            <div style="margin-top:10px;">
+              <textarea class="reply-input" placeholder="Reply…" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;background:transparent;color:var(--text);min-height:70px;"></textarea>
+              <div style="margin-top:6px;">
+                <button class="btn reply-btn" type="button">Reply</button>
+              </div>
+            </div>
+          </li>
+        `).join('');
+
+        ul.querySelectorAll('.thread').forEach(li=>{
+          const jid = li.getAttribute('data-id');
+          const ta  = li.querySelector('.reply-input');
+          const btn = li.querySelector('.reply-btn');
+          btn.addEventListener('click', ()=> postReply(jid, ta, li));
+          loadReplies(li, jid);
+        });
+      }catch(e){
+        ul.innerHTML = `<li class="item"><div class="muted">Error: ${e.message}</div></li>`;
+      }
+    }
+
+    // ---- replies (reuse existing endpoints) ----
+    async function loadReplies(li, journalId){
+      const host = li.querySelector('.replies');
+      host.innerHTML = '<div class="muted">Loading thread…</div>';
+      try{
+        const reps = await fetchJSON(`/api/journal/${journalId}/replies`);
+        if(!reps.length){ host.innerHTML = '<div class="muted">No replies yet.</div>'; return; }
+        host.innerHTML = reps.map(r => `
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div>
+              <div style="font-weight:700">${r.author_name}</div>
+              <div class="muted" style="font-size:.9rem">${fmtDT(r.created_at)}</div>
+              <div style="margin-top:4px;white-space:pre-wrap;">${r.body}</div>
+            </div>
+          </div>
+        `).join('');
+      }catch(e){
+        host.innerHTML = `<div class="muted">Failed to load replies: ${e.message}</div>`;
+      }
+    }
+    async function postReply(journalId, textarea, li){
+      const body = textarea.value.trim();
+      if(!body) return;
+      textarea.disabled = true;
+      try{
+        await fetchJSON(`/api/journal/${journalId}/replies`, { method:'POST', body: JSON.stringify({ body }) });
+        textarea.value = '';
+        await loadReplies(li, journalId);
+      }catch(e){
+        alert(e.message || 'Failed to reply.');
+      }finally{
+        textarea.disabled = false;
+      }
+    }
+
+    // ---- send message to this profile owner ----
+    qs('#mSend').addEventListener('click', async ()=>{
+      const id = getIdFromPath();
+      const err = qs('#mErr');
+      err.textContent = '';
+      const content = qs('#mBody').value.trim();
+      if(!content){ err.textContent = 'Please write a message.'; return; }
+      try{
+        await fetchJSON(`/api/profile/${id}/message`, {
+          method: 'POST',
+          body: JSON.stringify({ content })
+        });
+        qs('#mBody').value = '';
+        loadThreads();
+      }catch(e){
+        err.textContent = e.message || 'Failed to send.';
+      }
+    });
+
+    // ---- init ----
+    (async function init(){
+      try{
+        await loadProfile();
+        await loadThreads();
+      }catch(e){
+        location.href = '/login.html';
+      }
+    })();
+  </script>
+</body>
+</html>

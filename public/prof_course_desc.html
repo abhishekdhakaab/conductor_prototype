@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conductor • Course Description</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--shadow:0 6px 24px rgba(0,0,0,.35)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:900px;margin:0 auto;padding:20px}
+    .nav a{color:var(--primary);text-decoration:none;font-weight:700;margin-right:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .title{margin:0 0 10px;font-weight:900}
+    textarea,input{width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;background:transparent;color:var(--text)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:640px){.row{grid-template-columns:1fr}}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+    ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav" style="margin-bottom:14px;">
+      <a href="/professor.html">← Back to Professor</a>
+      <a href="/prof_customize.html">Customize Course</a>
+      <a href="/logout">Logout</a>
+    </nav>
+
+    <section class="card">
+      <h1 class="title">Course Description</h1>
+      <div id="hdr" class="muted" style="margin-bottom:8px;"></div>
+      <div id="err" class="muted" role="alert" aria-live="polite"></div>
+
+      <label for="desc">Description</label>
+      <textarea id="desc" placeholder="Overview, policies, expectations…" rows="8"></textarea>
+
+      <h3 style="margin-top:14px;">Important Links</h3>
+      <ul id="links"></ul>
+
+      <div class="row" style="margin-top:10px;">
+        <input id="label" placeholder="Label (e.g., Syllabus)" />
+        <input id="url" type="url" placeholder="https://…" />
+      </div>
+      <div style="margin-top:10px;">
+        <button id="add" class="btn" type="button">Add Link</button>
+        <button id="save" class="btn" type="button" style="margin-left:8px;">Save</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    async function fetchJSON(url,opts){
+      const init=opts||{};init.headers=Object.assign({'Accept':'application/json','Content-Type':'application/json'},init.headers||{});
+      const r=await fetch(url,init);let b={};try{b=await r.json();}catch{}
+      if(!r.ok) throw new Error(b.error||(r.status+' '+r.statusText)); return b;
+    }
+    async function ensureProfessor(){
+      const me=await fetchJSON('/api/session/me'); if(!me.is_professor) location.href='/login.html';
+      document.getElementById('hdr').textContent = `${me.course_code || ''} — ${me.course_title || ''} · ${me.term_name || ''} (${me.term_code || ''})`;
+      return me;
+    }
+    const list=[];
+    function renderLinks(){
+      const ul=document.getElementById('links');
+      if(!list.length){ul.innerHTML='<li class="muted">No links yet.</li>';return;}
+      ul.innerHTML=list.map((l,i)=>`<li style="display:flex;gap:8px;align-items:center;">
+          <a href="${l.url}" target="_blank" rel="noopener">${l.label}</a>
+          <button data-i="${i}" class="btn" style="padding:6px 10px;font-size:.9rem;">Remove</button>
+        </li>`).join('');
+      ul.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          const i=+btn.dataset.i; list.splice(i,1); renderLinks();
+        });
+      });
+    }
+    document.getElementById('add').addEventListener('click',()=>{
+      const label=document.getElementById('label').value.trim();
+      const url=document.getElementById('url').value.trim();
+      if(!label||!url) return;
+      list.push({label,url}); document.getElementById('label').value=''; document.getElementById('url').value='';
+      renderLinks();
+    });
+    document.getElementById('save').addEventListener('click', async ()=>{
+      try{
+        const description=document.getElementById('desc').value;
+        await fetchJSON('/api/professor/course-info',{method:'POST',body:JSON.stringify({description,links:list})});
+        alert('Saved.');
+      }catch(e){document.getElementById('err').textContent=e.message;}
+    });
+
+    (async ()=>{
+      try{
+        await ensureProfessor();
+        const info = await fetchJSON('/api/professor/course-info');
+        document.getElementById('desc').value = info.description || '';
+        (info.links||[]).forEach(l=>list.push(l)); renderLinks();
+      }catch(e){ document.getElementById('err').textContent=e.message || 'Failed to load'; }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conductor • Student</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--badge:#eef;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0;--green:#2eb88a}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--badge:#1e2a44;--shadow:0 6px 24px rgba(0,0,0,.35)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4}
+    .wrap{max-width:1000px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .brand{font-weight:900}
+    .nav a{color:var(--primary);text-decoration:none;font-weight:700;margin-right:14px}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+    .btn.secondary{background:var(--green)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .grid{display:grid;gap:16px}
+    .section-title{margin:0 0 12px;font-weight:900}
+    .row{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;margin-top:8px}
+    @media(max-width:560px){.row{grid-template-columns:1fr}}
+    .label{color:var(--muted)}
+    .value{font-weight:700}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--badge);border:1px solid var(--border)}
+    input[type=text],input[type=url],textarea{
+      width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;background:transparent;color:var(--text);font-size:1rem
+    }
+    textarea{min-height:110px}
+    ul.list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+    .item{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:12px}
+    .title{font-weight:800}
+    .muted{color:var(--muted)}
+    .hint{font-size:.92rem;color:var(--muted)}
+    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:.9rem}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Conductor • Student</div>
+      <nav class="nav">
+        <a href="/student.html">Dashboard</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <!-- Header -->
+    <section class="card">
+      <h2 class="section-title">Welcome</h2>
+      <div id="hdr" class="row" aria-busy="true">
+        <div class="label">Course</div><div class="value">…</div>
+        <div class="label">Term</div><div class="value">…</div>
+        <div class="label">Professor</div><div class="value">…</div>
+      </div>
+    </section>
+
+    <!-- Attendance -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Attendance</h2>
+      <p class="hint">Tap the button to mark yourself present today.</p>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button id="mark" class="btn">I'm here</button>
+        <div id="markStatus" class="muted" role="status" aria-live="polite"></div>
+      </div>
+      <ul id="myAttendance" class="list" style="margin-top:12px;"></ul>
+    </section>
+
+    <!-- Schedules -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Schedules</h2>
+      <ul id="sched" class="list" aria-busy="true">
+        <li class="item"><div class="title" style="opacity:.3;">Loading…</div></li>
+      </ul>
+    </section>
+
+    <!-- Stand-up / Work Journal -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Stand-up / Work Journal</h2>
+      <p class="hint">Share what you did, how you’re feeling about the team/course, and optionally reach out to someone.</p>
+      <div id="jErr" class="muted" role="alert" aria-live="polite"></div>
+      <form id="jForm" novalidate>
+        <label for="content">What did you do?</label>
+        <textarea id="content" placeholder="Yesterday I… Today I… I'm blocked by…"></textarea>
+
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px;">
+          <div>
+            <label>Self sentiment (-2..2)</label>
+            <input id="sSelf" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+          <div>
+            <label>Team sentiment (-2..2)</label>
+            <input id="sTeam" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+          <div>
+            <label>Course sentiment (-2..2)</label>
+            <input id="sCourse" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Reach out to</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <label class="pill"><input type="radio" name="reach" value="none" checked /> none</label>
+            <label class="pill"><input type="radio" name="reach" value="team_leader" /> team leader</label>
+            <label class="pill"><input type="radio" name="reach" value="ta" /> TA</label>
+            <label class="pill"><input type="radio" name="reach" value="professor" /> professor</label>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button type="submit" class="btn">Submit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- My entries (+threaded replies) -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">My Entries & Replies</h2>
+      <ul id="journals" class="list" aria-busy="true">
+        <li class="item"><div class="title" style="opacity:.3;">Loading…</div></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ---------- helpers ----------
+    async function fetchJSON(url, opts){
+      const init = opts || {};
+      init.headers = Object.assign(
+        {'Accept':'application/json','Content-Type':'application/json'},
+        init.headers||{}
+      );
+      const r = await fetch(url, init);
+      let body={}; try{ body = await r.json(); }catch{}
+      if(!r.ok) throw new Error(body.error || (r.status+' '+r.statusText));
+      return body;
+    }
+    const fmtDT = (x)=> new Date(x).toLocaleString();
+    const fmtD  = (d)=> d ? new Date(d+'T00:00:00').toLocaleDateString() : '—';
+
+    // ---------- header ----------
+    async function loadHeader(){
+      const hdr = await fetchJSON('/api/student/me');
+      const el = document.getElementById('hdr');
+      el.setAttribute('aria-busy','false');
+      el.innerHTML = `
+        <div class="label">Course</div><div class="value">${hdr.course_code} — ${hdr.course_title}</div>
+        <div class="label">Term</div><div class="value"><span class="badge">${hdr.term_code}</span> ${hdr.term_name}</div>
+        <div class="label">Professor</div><div class="value">${hdr.professor_name || '—'}</div>
+      `;
+    }
+
+    // ---------- schedules ----------
+    async function loadSchedules(){
+      const ul = document.getElementById('sched');
+      try{
+        const items = await fetchJSON('/api/student/schedules');
+        ul.setAttribute('aria-busy','false');
+        if(!items.length){ ul.innerHTML = '<li class="item muted">No schedule items yet.</li>'; return; }
+        ul.innerHTML = items.map(s=>`
+          <li class="item">
+            <div class="title">${s.title}</div>
+            <div class="muted">Created: ${fmtDT(s.created_at)} • Deadline: ${s.deadline_at?fmtDT(s.deadline_at):'—'}</div>
+            ${s.link ? `<div><a href="${s.link}" target="_blank" rel="noopener">Link</a></div>` : ''}
+            ${s.notes ? `<div style="margin-top:6px;">${s.notes}</div>` : ''}
+          </li>
+        `).join('');
+      }catch(e){
+        ul.innerHTML = `<li class="item muted">Error: ${e.message}</li>`;
+      }
+    }
+
+    // ---------- attendance ----------
+    async function markToday(){
+      const status = document.getElementById('markStatus');
+      status.textContent = 'Marking…';
+      try{
+        await fetchJSON('/api/student/attendance/today',{method:'POST'});
+        status.textContent = 'Marked present for today ✅';
+        loadAttendance();
+      }catch(e){
+        status.textContent = e.message || 'Failed to mark attendance.';
+      }
+    }
+    async function loadAttendance(){
+      const ul = document.getElementById('myAttendance');
+      try{
+        const recs = await fetchJSON('/api/student/attendance');
+        if(!recs.length){ ul.innerHTML = '<li class="item muted">No attendance yet.</li>'; return; }
+        ul.innerHTML = recs.map(r=>`
+          <li class="item">
+            <div class="title">Attended: ${fmtD(r.attended_on)}</div>
+            <div class="muted">${fmtDT(r.marked_at)} • source: ${r.source}</div>
+          </li>
+        `).join('');
+      }catch(e){
+        ul.innerHTML = `<li class="item muted">Error: ${e.message}</li>`;
+      }
+    }
+    document.getElementById('mark').addEventListener('click', markToday);
+
+    // ---------- work journals (create + list) ----------
+    document.getElementById('jForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const err = document.getElementById('jErr'); err.textContent='';
+      const content = document.getElementById('content').value.trim();
+      const sentiment_self   = Number(document.getElementById('sSelf').value || 0);
+      const sentiment_team   = Number(document.getElementById('sTeam').value || 0);
+      const sentiment_course = Number(document.getElementById('sCourse').value || 0);
+      const reach_out_to = (document.querySelector('input[name="reach"]:checked')||{}).value || 'none';
+      if(!content){ err.textContent='Please write something.'; return; }
+      try{
+        await fetchJSON('/api/student/journal',{
+          method:'POST',
+          body: JSON.stringify({ content, sentiment_self, sentiment_team, sentiment_course, reach_out_to })
+        });
+        document.getElementById('jForm').reset();
+        loadJournals();
+      }catch(e){
+        err.textContent = e.message || 'Failed to submit.';
+      }
+    });
+
+    async function loadJournals(){
+      const ul = document.getElementById('journals');
+      ul.setAttribute('aria-busy','true');
+      try{
+        const list = await fetchJSON('/api/student/journal');
+        ul.setAttribute('aria-busy','false');
+        if(!list.length){ ul.innerHTML = '<li class="item muted">No entries yet.</li>'; return; }
+        ul.innerHTML = list.map(x=>`
+          <li class="item journal" data-id="${x.id}">
+            <div class="title">Entry — ${fmtDT(x.created_at)}</div>
+            <div class="muted" style="font-size:.92rem;margin:6px 0;">
+              Reach out: <b>${x.reach_out_to}</b> • Self: ${x.sentiment_self} • Team: ${x.sentiment_team} • Course: ${x.sentiment_course}
+            </div>
+            <div style="white-space:pre-wrap;margin-top:6px;">${x.content}</div>
+
+            <div class="replies" style="margin-top:10px;"></div>
+
+            <div style="margin-top:10px;">
+              <textarea class="reply-input" placeholder="Reply in this thread…" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;background:transparent;color:var(--text);min-height:70px;"></textarea>
+              <div style="margin-top:6px;">
+                <button class="btn reply-btn" type="button">Reply</button>
+              </div>
+            </div>
+          </li>
+        `).join('');
+
+        // wire threads
+        ul.querySelectorAll('.journal').forEach(li=>{
+          const id = li.getAttribute('data-id');
+          const ta = li.querySelector('.reply-input');
+          const btn = li.querySelector('.reply-btn');
+          btn.addEventListener('click', ()=> postReply(id, ta, li));
+          loadReplies(li, id);
+        });
+      }catch(e){
+        ul.innerHTML = `<li class="item muted">Error: ${e.message}</li>`;
+      }
+    }
+
+    // ---------- threaded replies (same API the professor uses) ----------
+    async function loadReplies(li, journalId){
+      const host = li.querySelector('.replies');
+      host.innerHTML = '<div class="muted">Loading thread…</div>';
+      try{
+        const reps = await fetchJSON(`/api/journal/${journalId}/replies`);
+        if(!reps.length){ host.innerHTML = '<div class="muted">No replies yet.</div>'; return; }
+        host.innerHTML = reps.map(r => `
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <div style="flex:1">
+              <div style="font-weight:700">${r.author_name}</div>
+              <div class="muted" style="font-size:.9rem">${fmtDT(r.created_at)}</div>
+              <div style="margin-top:4px;white-space:pre-wrap;">${r.body}</div>
+            </div>
+          </div>
+        `).join('');
+      }catch(e){
+        host.innerHTML = `<div class="muted">Failed to load replies: ${e.message}</div>`;
+      }
+    }
+    async function postReply(journalId, textarea, li){
+      const body = textarea.value.trim();
+      if(!body) return;
+      textarea.disabled = true;
+      try{
+        await fetchJSON(`/api/journal/${journalId}/replies`, {
+          method:'POST',
+          body: JSON.stringify({ body })
+        });
+        textarea.value = '';
+        await loadReplies(li, journalId);
+      }catch(e){
+        alert(e.message || 'Failed to reply.');
+      }finally{
+        textarea.disabled = false;
+      }
+    }
+
+    // ---------- init ----------
+    (async function init(){
+      try{
+        await loadHeader();
+        await loadSchedules();
+        await loadAttendance();
+        await loadJournals();
+      }catch(e){
+        // if not logged in:
+        location.href = '/login.html';
+      }
+    })();
+  </script>
+</body>
+</html>

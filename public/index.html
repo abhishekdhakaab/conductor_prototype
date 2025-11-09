@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conductor • Home</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root { --bg:#f7f7f9; --card:#fff; --text:#111; --muted:#666; --border:#e6e6ee; --badge:#eef; --shadow:0 6px 24px rgba(0,0,0,.06); --primary:#3a6df0; --green:#2eb88a; }
+    @media (prefers-color-scheme: dark){
+      :root { --bg:#0f1115; --card:#161a22; --text:#f5f7fb; --muted:#aab3c5; --border:#202533; --badge:#1e2a44; --shadow:0 6px 24px rgba(0,0,0,.35); }
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .brand{font-weight:900;letter-spacing:.2px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-block;text-decoration:none;padding:10px 14px;border-radius:12px;font-weight:800;color:#fff}
+    .btn.primary{background:var(--primary)}
+    .btn.green{background:var(--green)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .grid{display:grid;gap:16px;grid-template-columns:1fr}
+    @media (min-width:900px){.grid{grid-template-columns:380px 1fr}}
+    .section-title{margin:0 0 12px;font-weight:800}
+    .prof{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+    .avatar{width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+    .name{font-size:1.35rem;margin:0;font-weight:900}
+    .muted{color:var(--muted)}
+    .row{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;margin-top:12px}
+    @media (max-width:540px){.row{grid-template-columns:1fr}}
+    .label{color:var(--muted)}
+    .value{font-weight:700}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--badge);border:1px solid var(--border)}
+    .students{list-style:none;margin:0;padding:0;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+    .stu{display:flex;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:10px;box-shadow:var(--shadow)}
+    .stu img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+    .dn{font-weight:750}
+    .error{color:#c03;font-weight:700;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Conductor</div>
+      <div class="actions">
+        <a class="btn primary" href="/login.html">Student Login</a>
+        <a class="btn green" href="/professor">Professor Console</a>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- Professor snapshot -->
+      <section class="card">
+        <h2 class="section-title">Professor</h2>
+        <div id="prof" class="prof" aria-busy="true">
+          <div class="avatar" style="opacity:.2"></div>
+          <div>
+            <div style="height:18px;background:#ccc;width:220px;border-radius:6px;opacity:.2;margin:6px 0;"></div>
+            <div style="height:14px;background:#ccc;width:120px;border-radius:6px;opacity:.2;margin:6px 0;"></div>
+          </div>
+          <div class="row" style="grid-column:1/-1">
+            <div class="label">Course</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.2;width:60%"></div>
+            <div class="label">Term</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.2;width:40%"></div>
+            <div class="label">Phone</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.2;width:30%"></div>
+            <div class="label">Social</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.2;width:50%"></div>
+          </div>
+        </div>
+        <div id="prof-error" class="error" role="alert" aria-live="polite"></div>
+        <p class="muted" style="margin-top:10px">Tip: Professors can post schedule items from the <a href="/professor">Professor Console</a>.</p>
+      </section>
+
+      <!-- Students -->
+      <section class="card">
+        <h2 class="section-title">Students (latest CSE110)</h2>
+        <ul id="students" class="students" aria-live="polite" aria-busy="true">
+          <li class="stu">
+            <div style="width:48px;height:48px;border-radius:50%;background:#ccc;opacity:.3"></div>
+            <div>
+              <div style="width:120px;height:12px;background:#ccc;border-radius:6px;opacity:.3;margin:6px 0;"></div>
+              <div style="width:60px;height:12px;background:#ccc;border-radius:6px;opacity:.3;margin:6px 0;"></div>
+            </div>
+          </li>
+        </ul>
+        <div id="students-error" class="error" role="alert" aria-live="polite"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Small helpers
+    function $(sel) { return document.querySelector(sel); }
+    function create(tag, attrs = {}, children = []) {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'class') n.className = v;
+        else if (k === 'text') n.textContent = v;
+        else n.setAttribute(k, v);
+      }
+      for (const c of [].concat(children)) {
+        if (c == null) continue;
+        if (typeof c === 'string') n.append(document.createTextNode(c));
+        else n.append(c);
+      }
+      return n;
+    }
+    async function getJSON(url) {
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      let body = null;
+      try { body = await r.json(); } catch {}
+      if (!r.ok) throw new Error((body && body.error) || `${r.status} ${r.statusText}`);
+      return body;
+    }
+
+    function renderProfessor(p) {
+      const node = $('#prof');
+      const err = $('#prof-error');
+      node.innerHTML = ''; err.textContent = ''; node.setAttribute('aria-busy','false');
+
+      if (!p) { err.textContent = 'No professor found.'; return; }
+
+      const img = create('img', {
+        class: 'avatar',
+        src: p.photo_url || 'https://via.placeholder.com/84?text=Prof',
+        alt: p.display_name || 'Professor'
+      });
+
+      const name = create('h3', { class: 'name' }, [p.display_name || '—']);
+      const pron = create('div', { class: 'muted' }, [p.pronouns ? `(${p.pronouns})` : '']);
+
+      const row = create('div', { class: 'row' }, [
+        create('div', { class: 'label' }, ['Course']),
+        create('div', { class: 'value' }, [`${p.course_code || '—'} — ${p.course_title || ''}`]),
+
+        create('div', { class: 'label' }, ['Term']),
+        create('div', { class: 'value' }, [
+          create('span', { class: 'badge' }, [p.term_code || '—']),
+          ' ',
+          p.term_name || ''
+        ]),
+
+        create('div', { class: 'label' }, ['Phone']),
+        create('div', { class: 'value' }, [p.phone || '—']),
+
+        create('div', { class: 'label' }, ['Social']),
+        create('div', { class: 'value' }, [(() => {
+          const s = p.socials || {};
+          const parts = [];
+          if (s.slack) parts.push(`Slack: ${s.slack}`);
+          if (s.github) parts.push(`GitHub: ${s.github}`);
+          return parts.join(' • ') || '—';
+        })()])
+      ]);
+
+      node.append(img, create('div', {}, [name, pron]), row);
+    }
+
+    function renderStudents(stu) {
+      const ul = $('#students');
+      const err = $('#students-error');
+      ul.innerHTML = ''; err.textContent = ''; ul.setAttribute('aria-busy','false');
+
+      if (!Array.isArray(stu) || !stu.length) {
+        err.textContent = 'No students found.';
+        return;
+      }
+
+      for (const s of stu) {
+        const li = create('li', { class: 'stu' }, [
+          create('img', {
+            src: s.photo_url || 'https://via.placeholder.com/48?text=S',
+            alt: s.display_name || 'Student'
+          }),
+          create('div', {}, [
+            create('div', { class: 'dn' }, [s.display_name || '—']),
+            create('div', { class: 'muted' }, [s.pronouns || ''])
+          ])
+        ]);
+        ul.append(li);
+      }
+    }
+
+    (async function init(){
+      try {
+        const prof = await getJSON('/api/professor-demo');
+        renderProfessor(prof);
+      } catch (e) {
+        $('#prof-error').textContent = e.message;
+        $('#prof').setAttribute('aria-busy','false');
+        console.error('professor-demo failed:', e);
+      }
+
+      try {
+        const students = await getJSON('/api/students');
+        renderStudents(students);
+      } catch (e) {
+        $('#students-error').textContent = e.message;
+        $('#students').setAttribute('aria-busy','false');
+        console.error('students failed:', e);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Conductor • Team</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0}
+    @media(prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--shadow:0 6px 24px rgba(0,0,0,.35)}}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:960px;margin:0 auto;padding:20px}
+    .link{color:var(--primary);text-decoration:none;font-weight:800}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .title{margin:0 0 10px;font-weight:900}
+    .muted{color:var(--muted)}
+    .grid{display:grid;gap:16px;grid-template-columns:1fr}
+    @media(min-width:900px){.grid{grid-template-columns:1.2fr .8fr}}
+    ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+    .row{border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--card);display:flex;gap:12px;align-items:center}
+    img.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+    textarea,input,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text)}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a class="link" href="/prof_teams.html">← Back to Teams</a></p>
+
+    <div class="grid">
+      <section class="card">
+        <h1 id="tname" class="title">Team</h1>
+        <div id="meta" class="muted" style="margin-bottom:10px"></div>
+
+        <h3 style="margin:10px 0 6px">Members</h3>
+        <ul id="members"><li class="muted">Loading…</li></ul>
+
+        <h3 style="margin:16px 0 6px">Reach out</h3>
+        <div id="reach" class="muted">Loading…</div>
+      </section>
+
+      <section class="card">
+        <h2 class="title">Evaluation Notes</h2>
+        <div class="muted" style="margin-bottom:6px">Notes here can be saved as <b>Private</b> (only you) or <b>Shared</b> (visible to the team in future features). Sentiment is internal and not sent to the team.</div>
+        <div id="err" class="muted" role="alert" aria-live="polite"></div>
+        <form id="f" novalidate>
+          <label for="vis">Visibility</label>
+          <select id="vis">
+            <option value="private">Private (only me)</option>
+            <option value="shared">Shared</option>
+          </select>
+
+          <label for="sent">Sentiment (−5 to 5)</label>
+          <input id="sent" type="number" min="-5" max="5" step="1" placeholder="optional">
+
+          <label for="body">Note</label>
+          <textarea id="body" rows="6" placeholder="Observations, coaching, risks, kudos, etc." required></textarea>
+
+          <div style="margin-top:10px"><button class="btn" type="submit">Save Note</button></div>
+        </form>
+
+        <h3 style="margin:16px 0 6px;">My Notes</h3>
+        <ul id="notes"><li class="muted">Loading…</li></ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    function qs(name){ const u=new URL(location.href); return u.searchParams.get(name); }
+    async function fetchJSON(url,opts){
+      const init=opts||{}; init.headers=Object.assign({'Accept':'application/json','Content-Type':'application/json'},init.headers||{});
+      const r=await fetch(url,init); let b={}; try{b=await r.json();}catch{}
+      if(!r.ok) throw new Error(b.error || (r.status+' '+r.statusText)); return b;
+    }
+    function mailtoList(members){ return members.map(m=>m.email).filter(Boolean).join(','); }
+
+    const teamId = qs('id');
+
+    async function guard(){
+      const me = await fetchJSON('/api/session/me');
+      if (!me.is_professor) location.href='/login.html';
+    }
+
+    async function loadTeam(){
+      const data = await fetchJSON(`/api/professor/team/${encodeURIComponent(teamId)}`);
+      document.getElementById('tname').textContent = `${data.name} (${data.code})`;
+      document.getElementById('meta').innerHTML =
+        `Leader: <b>${data.leader_name || '—'}</b> &nbsp;•&nbsp; TA: <b>${data.ta_name || '—'}</b>`;
+
+      const ul = document.getElementById('members');
+      ul.innerHTML = data.members.map(m => `
+        <li class="row">
+          <img class="avatar" src="${m.photo_url || 'https://via.placeholder.com/48?text=S'}" alt="">
+          <div style="flex:1">
+            <div style="font-weight:800">${m.display_name} ${m.is_leader ? '<span class="muted">(Leader)</span>':''}</div>
+            <div class="muted" style="font-size:.95rem">${m.pronouns || ''} ${m.email ? '• '+m.email : ''}</div>
+          </div>
+        </li>
+      `).join('');
+
+      const reach = document.getElementById('reach');
+      const all = mailtoList(data.members);
+      const leader = data.members.find(m=>m.is_leader);
+      const taEmail = data.ta_id ? (data.members.find(m=>m.id===data.ta_id)?.email || '') : '';
+      reach.innerHTML = `
+        ${all ? `<div><a class="link" href="mailto:${all}">Email entire team</a></div>` : '<div class="muted">No emails on file.</div>'}
+        ${leader?.email ? `<div><a class="link" href="mailto:${leader.email}">Email team leader</a></div>` : ''}
+        ${taEmail ? `<div><a class="link" href="mailto:${taEmail}">Email TA</a></div>` : ''}
+      `;
+    }
+
+    async function loadNotes(){
+      const ul = document.getElementById('notes');
+      try{
+        const rows = await fetchJSON(`/api/professor/eval-notes?subject_type=team&subject_id=${encodeURIComponent(teamId)}`);
+        if(!rows.length){ ul.innerHTML = '<li class="muted">No notes yet.</li>'; return; }
+        ul.innerHTML = rows.map(n => `
+          <li class="row" style="display:block">
+            <div class="muted" style="font-size:.9rem">${new Date(n.created_at).toLocaleString()} • ${n.visibility.toUpperCase()} ${Number.isFinite(n.sentiment)?`• Sentiment ${n.sentiment}`:''}</div>
+            <div style="margin-top:6px;white-space:pre-wrap">${n.body}</div>
+          </li>
+        `).join('');
+      }catch(e){
+        ul.innerHTML = `<li class="muted">Failed to load notes: ${e.message}</li>`;
+      }
+    }
+
+    document.getElementById('f').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const err = document.getElementById('err'); err.textContent='';
+      const visibility = document.getElementById('vis').value;
+      const sentiment = document.getElementById('sent').value;
+      const body = document.getElementById('body').value.trim();
+      if(!body){ err.textContent='Note cannot be empty.'; return; }
+      try{
+        await fetchJSON('/api/professor/eval-notes', {
+          method:'POST',
+          body: JSON.stringify({
+            subject_type:'team',
+            subject_id: teamId,
+            visibility,
+            sentiment: sentiment === '' ? null : Number(sentiment),
+            body
+          })
+        });
+        document.getElementById('f').reset();
+        await loadNotes();
+        err.textContent = 'Saved.';
+      }catch(e){
+        err.textContent = e.message || 'Save failed.';
+      }
+    });
+
+    (async ()=>{
+      if(!teamId){ location.href='/prof_teams.html'; return; }
+      await guard();
+      await loadTeam();
+      await loadNotes();
+    })();
+  </script>
+</body>
+</html>

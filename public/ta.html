@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Conductor • TA Console</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root { --bg:#f7f7f9; --card:#fff; --text:#111; --muted:#666; --border:#e6e6ee; --shadow:0 6px 24px rgba(0,0,0,.06); --primary:#3a6df0; }
+    @media (prefers-color-scheme: dark){
+      :root { --bg:#0f1115; --card:#161a22; --text:#f5f7fb; --muted:#aab3c5; --border:#202533; --shadow:0 6px 24px rgba(0,0,0,.35); }
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:980px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .brand{font-weight:900}
+    .btn{border:0;border-radius:10px;padding:10px 12px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .section-title{margin:0 0 12px;font-weight:900}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+    .team{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:12px}
+    .muted{color:var(--muted)}
+    .avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+    .leader{border:1px solid var(--border); padding:2px 8px; border-radius:999px; font-size:.8rem}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Conductor • TA Console</div>
+      <div><button id="logout" class="btn">Logout</button></div>
+    </header>
+
+    <section class="card">
+      <h2 class="section-title">My Teams</h2>
+      <div id="err" class="muted" role="alert" aria-live="polite"></div>
+      <div id="teams" class="grid" aria-live="polite" aria-busy="true">
+        <div class="team" style="opacity:.5;">Loading…</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    async function fetchJSON(url, opts){
+      const init = opts || {};
+      init.headers = Object.assign({ 'Accept':'application/json' }, init.headers || {});
+      const r = await fetch(url, init);
+      let body = {}; try{ body = await r.json(); }catch{}
+      if(!r.ok){
+        const msg = body.error || (r.status + ' ' + r.statusText);
+        if (r.status === 401) { location.href = '/login.html'; return; }
+        throw new Error(msg);
+      }
+      return body;
+    }
+
+    function render(teams){
+      const root = document.getElementById('teams');
+      root.setAttribute('aria-busy','false');
+      if(!teams.length){ root.innerHTML = '<div class="muted">No teams assigned.</div>'; return; }
+
+      root.innerHTML = teams.map(t => `
+        <div class="team">
+          <div style="font-weight:900;">${t.name} <span class="muted">(${t.code})</span></div>
+          <div style="margin-top:8px;">
+            ${t.members.map(m => `
+              <div style="display:flex;gap:8px;align-items:center;margin:8px 0;">
+                <img class="avatar" src="${m.photo_url || 'https://via.placeholder.com/40?text=S'}" alt="">
+                <div>
+                  <div style="font-weight:800;">${m.display_name}</div>
+                  <div class="muted" style="font-size:.9rem;">${m.pronouns || ''}</div>
+                  ${m.is_leader ? '<div class="leader" style="margin-top:4px;">Leader</div>' : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function init(){
+      try{
+        const data = await fetchJSON('/api/ta/teams');
+        render(data);
+      }catch(e){
+        document.getElementById('err').textContent = e.message || 'Failed to load.';
+      }
+    }
+
+    document.getElementById('logout').addEventListener('click', async ()=>{
+      try{ await fetch('/api/logout',{method:'POST'}); }catch{}
+      location.href = '/login.html';
+    });
+
+    init();
+  </script>
+</body>
+</html>

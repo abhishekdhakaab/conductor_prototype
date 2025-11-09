@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conductor • Professor Console</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--badge:#eef;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0;--green:#2eb88a}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--badge:#1e2a44;--shadow:0 6px 24px rgba(0,0,0,.35)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.4}
+    .wrap{max-width:1000px;margin:0 auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .brand{font-weight:900}
+    .nav a{color:var(--primary);text-decoration:none;font-weight:700;margin-right:14px}
+    .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--primary);color:#fff;cursor:pointer}
+    .btn.secondary{background:var(--green)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .grid{display:grid;gap:16px}
+    .section-title{margin:0 0 12px;font-weight:900}
+    .prof{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+    .avatar{width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--border);background:#ddd}
+    .row{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;margin-top:8px}
+    @media(max-width:560px){.row{grid-template-columns:1fr}}
+    .label{color:var(--muted)}
+    .value{font-weight:700}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--badge);border:1px solid var(--border)}
+    input[type=text],input[type=url],input[type=datetime-local],textarea{
+      width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;background:transparent;color:var(--text);font-size:1rem
+    }
+    textarea{min-height:110px}
+    ul.list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+    .item{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:12px}
+    .title{font-weight:800}
+    .muted{color:var(--muted)}
+    img.stu{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
+    .hint{font-size:.92rem;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Conductor • Professor Console</div>
+      <nav class="nav">
+        <a href="/professor.html">Dashboard</a>
+        <a href="/prof_course_desc.html">Course Description</a>
+        <a href="/prof_customize.html">Customize Course</a>
+        <a href="/prof_teams.html">Teams</a>
+
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <!-- Professor header card -->
+    <section class="card">
+      <h2 class="section-title">Professor</h2>
+      <div id="prof" class="prof">
+        <div class="avatar" style="opacity:.25"></div>
+        <div>
+          <div style="height:18px;width:220px;background:#ccc;border-radius:6px;opacity:.25;margin:6px 0;"></div>
+          <div style="height:14px;width:120px;background:#ccc;border-radius:6px;opacity:.25;margin:6px 0;"></div>
+        </div>
+        <div class="row" style="grid-column:1/-1">
+          <div class="label">Course</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.25"></div>
+          <div class="label">Term</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.25"></div>
+          <div class="label">Phone</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.25"></div>
+          <div class="label">Social</div><div style="height:12px;background:#ccc;border-radius:6px;opacity:.25"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Post schedule -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Post a Schedule Item</h2>
+      <p class="hint">Students will see these on their dashboards. (Title is required.)</p>
+      <div id="err" class="muted" role="alert" aria-live="polite"></div>
+      <form id="f" novalidate>
+        <div class="grid" style="grid-template-columns:1fr 240px">
+          <div>
+            <label for="title">Name / Title</label>
+            <input id="title" type="text" placeholder="e.g., Iteration 1 Submission" required />
+          </div>
+          <div>
+            <label for="deadline">Deadline</label>
+            <input id="deadline" type="datetime-local" />
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label for="link">Link (optional)</label>
+          <input id="link" type="url" placeholder="https://…" />
+        </div>
+        <div style="margin-top:10px">
+          <label for="notes">Notes (optional)</label>
+          <textarea id="notes" placeholder="Details, instructions, etc."></textarea>
+        </div>
+        <div style="margin-top:10px">
+          <button type="submit" class="btn">Post Schedule</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Schedule list -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Upcoming & Posted</h2>
+      <ul id="list" class="list" aria-live="polite" aria-busy="true">
+        <li class="item"><div class="title" style="opacity:.3;">Loading…</div></li>
+      </ul>
+    </section>
+
+    <!-- Roster & rubric -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Roster & Rubric</h2>
+      <ul id="roster" class="list" aria-live="polite" aria-busy="true">
+        <li class="item"><div class="title" style="opacity:.3;">Loading roster…</div></li>
+      </ul>
+    </section>
+
+    <!-- Student reach-outs -->
+    <section class="card" style="margin-top:16px;">
+      <h2 class="section-title">Student Questions (Reach-outs)</h2>
+      <ul id="reach" class="list" aria-live="polite" aria-busy="true">
+        <li class="item"><div class="title" style="opacity:.3;">Loading…</div></li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    // ---------- helpers ----------
+    async function fetchJSON(url, opts){
+      const init = opts || {};
+      init.headers = Object.assign({'Accept':'application/json','Content-Type':'application/json'}, init.headers||{});
+      const r = await fetch(url, init);
+      let body={}; try{body = await r.json();}catch{}
+      if(!r.ok) throw new Error(body.error || (r.status+' '+r.statusText));
+      return body;
+    }
+    const fmtDateTime = (dt)=> dt ? new Date(dt).toLocaleString() : '—';
+    const fmtDate = (d)=> d ? new Date(d+'T00:00:00').toLocaleDateString() : '—';
+
+    async function ensureProfessor(){
+      const me = await fetchJSON('/api/session/me');
+      if(!me.is_professor){ location.href='/login.html'; return; }
+      return me;
+    }
+
+    // ---------- professor header ----------
+    async function loadProfessorHeader(){
+      // Try to show logged-in course header + a photo (fallback to professor-demo for photo)
+      const hdr = await fetchJSON('/api/session/me');
+      let photo='', name='Professor', pronouns='';
+      try{
+        const demo = await fetchJSON('/api/professor-demo');
+        photo = demo.photo_url || '';
+        name = demo.display_name || name;
+        pronouns = demo.pronouns || '';
+      }catch{}
+      const node = document.getElementById('prof');
+      node.innerHTML = '';
+      const img = document.createElement('img');
+      img.className='avatar';
+      img.src = photo || 'https://via.placeholder.com/84?text=Prof';
+      img.alt = name;
+
+      const h = document.createElement('div');
+      h.innerHTML = `
+        <div style="font-size:1.2rem;font-weight:900">${name}</div>
+        <div class="muted">${pronouns ? '('+pronouns+')' : ''}</div>
+      `;
+
+      const row = document.createElement('div');
+      row.className='row';
+      row.innerHTML = `
+        <div class="label">Course</div>
+        <div class="value">${hdr.course_code || ''} — ${hdr.course_title || ''}</div>
+        <div class="label">Term</div>
+        <div class="value"><span class="badge">${hdr.term_code || ''}</span> ${hdr.term_name || ''}</div>
+        <div class="label">Phone</div><div class="value">—</div>
+        <div class="label">Social</div><div class="value">—</div>
+      `;
+      node.append(img, h, row);
+    }
+
+    // ---------- schedules ----------
+    function renderSchedules(items){
+      const ul = document.getElementById('list');
+      ul.setAttribute('aria-busy','false');
+      if(!items.length){ ul.innerHTML = '<li class="item muted">No schedule items yet.</li>'; return; }
+      ul.innerHTML = items.map(s=>`
+        <li class="item">
+          <div class="title">${s.title}</div>
+          <div class="muted">Created: ${fmtDateTime(s.created_at)} • Deadline: ${fmtDateTime(s.deadline_at)}</div>
+          ${s.link ? `<div><a href="${s.link}" target="_blank" rel="noopener">Link</a></div>` : ''}
+          ${s.notes ? `<div style="margin-top:6px;">${s.notes}</div>` : ''}
+        </li>
+      `).join('');
+    }
+    async function loadSchedules(){
+      try{ renderSchedules(await fetchJSON('/api/schedules')); }
+      catch(e){ document.getElementById('list').innerHTML = `<li class="item muted">Error: ${e.message}</li>`; }
+    }
+    document.getElementById('f').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const err = document.getElementById('err'); err.textContent='';
+      const title = document.getElementById('title').value.trim();
+      const link = document.getElementById('link').value.trim();
+      const notes = document.getElementById('notes').value.trim();
+      const deadlineLocal = document.getElementById('deadline').value;
+      const deadline_at = deadlineLocal ? new Date(deadlineLocal).toISOString() : null;
+      if(!title){ err.textContent='Title is required.'; return; }
+      try{
+        await fetchJSON('/api/schedules',{method:'POST',body:JSON.stringify({title,link,notes,deadline_at})});
+        (document.getElementById('f')).reset();
+        loadSchedules();
+      }catch(e){
+        err.textContent = e.message || 'Failed to post.';
+      }
+    });
+
+    // ---------- roster + rubric ----------
+    async function loadRoster(){
+      const ul = document.getElementById('roster');
+      ul.setAttribute('aria-busy','true');
+      try{
+        const r = await fetchJSON('/api/professor/roster');
+        ul.setAttribute('aria-busy','false');
+        if(!r.length){ ul.innerHTML = '<li class="item muted">No students enrolled.</li>'; return; }
+        ul.innerHTML = r.map(s=>{
+          const last = s.last_attended ? fmtDate(s.last_attended) : '';
+          const score = (typeof s.score_out_of_10==='number') ? `${s.score_out_of_10.toFixed(1)} / 10` : '—';
+          const att = Number(s.attendance_count || 0);
+          const weight = s.rubric_meta?.attendance_weight ?? 0;
+          const enabled = !!s.rubric_meta?.attendance_enabled;
+          return `
+            <li class="item" style="display:flex;gap:12px;align-items:center;">
+              
+                    <a href="/profile/${s.id}" style="display:inline-block">
+                      <img class="stu" src="${s.photo_url || 'https://via.placeholder.com/48?text=S'}" alt="${s.display_name}">
+                    </a>
+
+              <div style="flex:1">
+
+                <div class="title">
+                <a href="/profile/${s.id}" style="text-decoration:none;color:inherit;">${s.display_name}</a>
+                </div>
+                <div class="muted" style="font-size:.9rem;">${s.pronouns || ''}</div>
+                <div class="muted" style="font-size:.92rem;margin-top:4px;">
+                  Attendance: <b>${att}</b>/10
+                  ${last ? ` • Last: ${last}` : ''}
+                  ${s.present_today ? ` • <span style="color:#2eb88a;font-weight:700;">Present today</span>` : ''}
+                </div>
+                <div style="margin-top:6px;">
+                  <span style="font-weight:800;">Score:</span> ${score}
+                  ${enabled ? `<span class="muted" style="font-size:.9rem;">(attendance weight ${weight}%)</span>`
+                            : `<span class="muted" style="font-size:.9rem;">(attendance not counted)</span>`}
+                </div>
+              </div>
+            </li>
+          `;
+        }).join('');
+      }catch(e){
+        ul.innerHTML = `<li class="item muted">Error: ${e.message}</li>`;
+      }
+    }
+
+    // ---------- reach-outs (journals to professor) ----------
+
+  async function fetchJSON(url, opts){
+    const init = opts || {};
+    init.headers = Object.assign({'Accept':'application/json','Content-Type':'application/json'}, init.headers||{});
+    const r = await fetch(url, init);
+    let b={}; try{ b = await r.json(); }catch{}
+    if(!r.ok) throw new Error(b.error || (r.status+' '+r.statusText));
+    return b;
+  }
+  const fmtDT = (x)=> new Date(x).toLocaleString();
+
+  async function loadReplies(li, journalId){
+    const host = li.querySelector('.replies');
+    host.innerHTML = '<div class="muted">Loading thread…</div>';
+    try{
+      const reps = await fetchJSON(`/api/journal/${journalId}/replies`);
+      if(!reps.length){ host.innerHTML = '<div class="muted">No replies yet.</div>'; return; }
+      host.innerHTML = reps.map(r => `
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <img src="${r.author_photo || 'https://via.placeholder.com/32?text=U'}" width="32" height="32" style="border-radius:50%;object-fit:cover;border:1px solid var(--border);" alt="">
+          <div>
+            <div style="font-weight:700">${r.author_name}</div>
+            <div class="muted" style="font-size:.9rem">${fmtDT(r.created_at)}</div>
+            <div style="margin-top:4px;white-space:pre-wrap;">${r.body}</div>
+          </div>
+        </div>
+      `).join('');
+    }catch(e){
+      host.innerHTML = `<div class="muted">Failed to load replies: ${e.message}</div>`;
+    }
+  }
+
+  async function postReply(journalId, textarea, li){
+    const body = textarea.value.trim();
+    if(!body) return;
+    textarea.disabled = true;
+    try{
+      await fetchJSON(`/api/journal/${journalId}/replies`, {
+        method:'POST',
+        body: JSON.stringify({ body })
+      });
+      textarea.value = '';
+      await loadReplies(li, journalId);
+    }catch(e){
+      alert(e.message || 'Failed to reply.');
+    }finally{
+      textarea.disabled = false;
+    }
+  }
+
+  async function loadReachouts(){
+    const ul = document.getElementById('reach');
+    ul.setAttribute('aria-busy','true');
+    try{
+      const r = await fetchJSON('/api/professor/journal');
+      ul.setAttribute('aria-busy','false');
+      if(!r.length){ ul.innerHTML = '<li class="item muted">No student questions yet.</li>'; return; }
+
+      ul.innerHTML = r.map(x=>`
+        <li class="item reach" data-id="${x.id}" style="display:flex;gap:12px;">
+          <img class="stu" src="${x.photo_url || 'https://via.placeholder.com/48?text=S'}" alt="">
+          <div style="flex:1">
+            <div class="title">${x.student_name}</div>
+            <div class="muted" style="font-size:.9rem;">${fmtDT(x.created_at)}</div>
+            <div style="margin-top:6px;white-space:pre-wrap;">${x.content}</div>
+
+            <div class="replies" style="margin-top:10px;"></div>
+
+            <div style="margin-top:10px;">
+              <textarea class="reply-input" placeholder="Write a reply…" style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px;background:transparent;color:var(--text);min-height:70px;"></textarea>
+              <div style="margin-top:6px;">
+                <button class="btn reply-btn" type="button">Reply</button>
+              </div>
+            </div>
+          </div>
+        </li>
+      `).join('');
+
+      // wire up per-item
+      ul.querySelectorAll('.reach').forEach(li=>{
+        const id = li.getAttribute('data-id');
+        const ta = li.querySelector('.reply-input');
+        const btn = li.querySelector('.reply-btn');
+        btn.addEventListener('click', ()=> postReply(id, ta, li));
+        // initial load replies
+        loadReplies(li, id);
+      });
+    }catch(e){
+      ul.innerHTML = `<li class="item muted">Error: ${e.message}</li>`;
+    }
+  }
+
+
+
+    (async function init(){
+      try{
+        await ensureProfessor();
+        await loadProfessorHeader();
+        await loadSchedules();
+        await loadRoster();
+        await loadReachouts();
+      }catch(e){
+        location.href = '/login.html';
+      }
+    })();
+  </script>
+</body>
+</html>

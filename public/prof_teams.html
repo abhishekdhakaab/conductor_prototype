@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Conductor • Teams</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{--bg:#f7f7f9;--card:#fff;--text:#111;--muted:#666;--border:#e6e6ee;--shadow:0 6px 24px rgba(0,0,0,.06);--primary:#3a6df0}
+    @media(prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#161a22;--text:#f5f7fb;--muted:#aab3c5;--border:#202533;--shadow:0 6px 24px rgba(0,0,0,.35)}}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .wrap{max-width:960px;margin:0 auto;padding:20px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+    .link{color:var(--primary);text-decoration:none;font-weight:800}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+    .title{margin:0 0 10px;font-weight:900}
+    ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+    .item{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--card)}
+    .muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="link" href="/professor">← Professor Console</a>
+      <div style="display:flex;gap:12px;">
+        <a class="link" href="/prof_course_desc.html">Course Description</a>
+        <a class="link" href="/prof_customize.html">Customize Course</a>
+      </div>
+    </div>
+
+    <section class="card">
+      <h1 class="title">Teams</h1>
+      <ul id="list"><li class="muted">Loading teams…</li></ul>
+    </section>
+  </div>
+
+  <script>
+    async function fetchJSON(url){
+      const r = await fetch(url,{headers:{'Accept':'application/json'}});
+      const b = await r.json().catch(()=> ({}));
+      if(!r.ok) throw new Error(b.error || (r.status+' '+r.statusText));
+      return b;
+    }
+    (async ()=>{
+      try{
+        const me = await fetchJSON('/api/session/me');
+        if(!me.is_professor){ location.href='/login.html'; return; }
+        const data = await fetchJSON('/api/professor/teams');
+        const ul = document.getElementById('list');
+        if(!data.length){ ul.innerHTML = '<li class="muted">No teams.</li>'; return; }
+        ul.innerHTML = data.map(t => `
+          <li class="item">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <div>
+                <div style="font-weight:800">${t.name} <span class="muted">(${t.code})</span></div>
+                <div class="muted" style="font-size:.95rem">
+                  Leader: <b>${t.leader_name || '—'}</b> &nbsp;•&nbsp;
+                  TA: <b>${t.ta_name || '—'}</b> &nbsp;•&nbsp;
+                  Members: ${t.size}
+                </div>
+              </div>
+              <div><a class="link" href="/prof_team.html?id=${encodeURIComponent(t.team_id)}">Open</a></div>
+            </div>
+          </li>
+        `).join('');
+      } catch(e){
+        document.getElementById('list').innerHTML = `<li class="muted">Error: ${e.message}</li>`;
+      }
+    })();
+  </script>
+</body>
+</html>
